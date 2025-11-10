@@ -15,11 +15,49 @@ const Index = () => {
   };
 
   const handleColorize = async (): Promise<string> => {
-    // Simulate API call - replace with actual API integration
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    if (!sketchUrl) throw new Error("No sketch uploaded");
     
-    // Mock colorized result - replace with actual API response
-    return "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&q=80&auto=format&fit=crop";
+    // Use AI to colorize the sketch
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-image-preview",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: "Add realistic, vibrant colors to this black and white sketch. Maintain the original composition and content exactly as shown. Use natural, harmonious colors that bring the sketch to life."
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: sketchUrl
+                }
+              }
+            ]
+          }
+        ],
+        modalities: ["image", "text"]
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to colorize image");
+    }
+
+    const data = await response.json();
+    const colorizedImageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    
+    if (!colorizedImageUrl) {
+      throw new Error("No colorized image returned");
+    }
+
+    return colorizedImageUrl;
   };
 
   return (
