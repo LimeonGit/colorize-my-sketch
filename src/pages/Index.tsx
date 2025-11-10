@@ -15,49 +15,38 @@ const Index = () => {
   };
 
   const handleColorize = async (): Promise<string> => {
-    if (!sketchUrl) throw new Error("No sketch uploaded");
+    if (!sketchFile) throw new Error("No sketch uploaded");
     
-    // Use AI to colorize the sketch
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image-preview",
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: "Add realistic, vibrant colors to this black and white sketch. Maintain the original composition and content exactly as shown. Use natural, harmonious colors that bring the sketch to life."
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: sketchUrl
-                }
-              }
-            ]
-          }
-        ],
-        modalities: ["image", "text"]
-      })
+    // Convert file to base64
+    const reader = new FileReader();
+    const base64Promise = new Promise<string>((resolve, reject) => {
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(sketchFile);
     });
+    
+    const imageBase64 = await base64Promise;
+    
+    // Call backend function to colorize
+    const response = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/colorize-sketch`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ imageBase64 }),
+      }
+    );
 
     if (!response.ok) {
-      throw new Error("Failed to colorize image");
+      const error = await response.json();
+      throw new Error(error.error || "Failed to colorize image");
     }
 
     const data = await response.json();
-    const colorizedImageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-    
-    if (!colorizedImageUrl) {
-      throw new Error("No colorized image returned");
-    }
-
-    return colorizedImageUrl;
+    return data.colorizedImageUrl;
   };
 
   return (

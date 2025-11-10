@@ -1,0 +1,4 @@
+project_id = "ptyqvdycjgolljzmzqoh"
+
+[functions.colorize-sketch]
+verify_jwt = false
